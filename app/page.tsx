@@ -1,8 +1,16 @@
-'use client';
+{paginatedResults.map((item, index) => {
+                const displayIndex = (currentPage - 1) * resultsPerPage + index + 1;
+                return (
+                  <div
+                    key={index}
+                    className="bg-gray-700/30 p-4 rounded-lg border border-gray-600/30 hover:border-purple-500/50 transition-all hover:bg-gray-700/50"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-xs text-'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { FaCompass, FaBook, FaBalanceScale, FaEnvelope, FaMobile, FaDownload, FaSpinner, FaLink, FaClock, FaInstagram, FaWhatsapp } from 'react-icons/fa';
+import { FaCompass, FaBook, FaBalanceScale, FaEnvelope, FaMobile, FaDownload, FaSpinner, FaLink, FaClock, FaInstagram, FaWhatsapp, FaExternalLinkAlt, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 
 interface SitemapResult {
   url: string;
