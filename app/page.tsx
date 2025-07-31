@@ -3,10 +3,38 @@
                 return (
                   <div
                     key={index}
-                    className="bg-gray-700/30 p-4 rounded-lg border border-gray-600/30 hover:border-purple-500/50 transition-all hover:bg-gray-700/50"
+                    className="bg-gray-700/30 p-4 rounded-lg border border-gray-600/30 hover:border-purple-500/50 transition-all hover:bg-gray-700/50 group"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <span className="text-xs text-'use client';
+                      <span className="text-xs text-gray-500 font-mono">#{displayIndex}</span>
+                      <div className="flex items-center space-x-2">
+                        <FaCheckCircle className="text-green-400 text-xs" />
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-purple-300 transition-colors"
+                        >
+                          <FaExternalLinkAlt className="text-xs" />
+                        </a>
+                      </div>
+                    </div>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-400 hover:text-green-300 font-mono text-sm break-all transition-colors block group-hover:text-green-300"
+                    >
+                      {item.url}
+                    </a>
+                    {item.title && (
+                      <p className="text-gray-400 text-xs mt-2 truncate" title={item.title}>
+                        📄 {item.title}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
