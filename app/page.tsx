@@ -38,7 +38,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { FaCompass, FaBook, FaBalanceScale, FaEnvelope, FaMobile, FaDownload, FaSpinner, FaLink, FaClock, FaInstagram, FaWhatsapp, FaExternalLinkAlt, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import { FaCompass, FaBook, FaBalanceScale, FaEnvelope, FaMobile, FaDownload, FaSpinner, FaLink, FaClock, FaInstagram, FaWhatsapp, FaExternalLinkAlt, FaCheckCircle, FaExclamationTriangle, FaCopy, FaGlobe } from 'react-icons/fa';
+import { formatTime, generateSitemapFilename, downloadTextFile, copyToClipboard } from '../utils/helpers';
 
 interface SitemapResult {
   url: string;
@@ -127,15 +128,17 @@ export default function SitemapGenerator() {
 
   const downloadTxt = () => {
     const content = results.map(item => item.url).join('\n');
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sitemap-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const filename = generateSitemapFilename(url);
+    downloadTextFile(content, filename);
+  };
+
+  const copyAllLinks = async () => {
+    const content = results.map(item => item.url).join('\n');
+    const success = await copyToClipboard(content);
+    if (success) {
+      // You can add a toast notification here
+      console.log('Links copied to clipboard!');
+    }
   };
 
   const paginatedResults = results.slice(
@@ -224,15 +227,24 @@ export default function SitemapGenerator() {
               </div>
               <div className="flex items-center space-x-2 bg-green-500/20 px-4 py-2 rounded-lg">
                 <FaClock className="text-green-400" />
-                <span className="text-green-300">Waktu Crawl: {crawlTime}ms</span>
+                <span className="text-green-300">Waktu Crawl: {formatTime(crawlTime)}</span>
               </div>
-              <button
-                onClick={downloadTxt}
-                className="flex items-center space-x-2 bg-yellow-500/20 hover:bg-yellow-500/30 px-4 py-2 rounded-lg transition-all text-yellow-300 hover:text-yellow-200"
-              >
-                <FaDownload />
-                <span>Download TXT</span>
-              </button>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={downloadTxt}
+                  className="flex items-center space-x-2 bg-yellow-500/20 hover:bg-yellow-500/30 px-4 py-2 rounded-lg transition-all text-yellow-300 hover:text-yellow-200"
+                >
+                  <FaDownload />
+                  <span>Download TXT</span>
+                </button>
+                <button
+                  onClick={copyAllLinks}
+                  className="flex items-center space-x-2 bg-blue-500/20 hover:bg-blue-500/30 px-4 py-2 rounded-lg transition-all text-blue-300 hover:text-blue-200"
+                >
+                  <FaCopy />
+                  <span>Copy All</span>
+                </button>
+              </div>
             </div>
 
             {/* Links List */}
