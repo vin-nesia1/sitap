@@ -1,103 +1,74 @@
-const isValidUrl = (urlString: string): boolean => {
-    try {
-      const urlObj = new URL(urlString);
-      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  };
-
-  const formatTime = (ms: number): string => {
-    if (ms < 1000) return `${ms}ms`;
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-    return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
-  };
-
-  const generateSitemapFilename = (url: string): string => {
-    try {
-      const domain = new URL(url).hostname.replace(/^www\./, '');
-      const timestamp = new Date().toISOString().split('T')[0];
-      return `sitemap-${domain}-${timestamp}.txt`;
-    } catch {
-      return `sitemap-${new Date().toISOString().split('T')[0]}.txt`;
-    }
-  };
-
-  const downloadTextFile = (content: string, filename: string): void => {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    
-    link.href = url;
-    link.download = filename;
-    link.style.display = 'none';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    URL.revokeObjectURL(url);
-  };
-
-  const copyToClipboard = async (text: string): Promise<boolean> => {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      
-      document.body.appendChild(textarea);
-      textarea.select();
-      
-      const success = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      
-      return success;
-    }
-  };              {paginatedResults.map((item, index) => {
-                const displayIndex = (currentPage - 1) * resultsPerPage + index + 1;
-                return (
-                  <div
-                    key={index}
-                    className="bg-gray-700/30 p-4 rounded-lg border border-gray-600/30 hover:border-purple-500/50 transition-all hover:bg-gray-700/50 group"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-xs text-gray-500 font-mono">#{displayIndex}</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-green-400 text-xs">✅</span>
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gray-400 hover:text-purple-300 transition-colors"
-                        >
-                          <span className="text-xs">🔗</span>
-                        </a>
-                      </div>
-                    </div>
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-400 hover:text-green-300 font-mono text-sm break-all transition-colors block group-hover:text-green-300"
-                    >
-                      {item.url}
-                    </a>
-                    {item.title && (
-                      <p className="text-gray-400 text-xs mt-2 truncate" title={item.title}>
-                        📄 {item.title}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import { FaCompass, FaBook, FaBalanceScale, FaEnvelope, FaMobile, FaDownload, FaSpinner, FaLink, FaClock, FaInstagram, FaWhatsapp, FaExternalLinkAlt, FaCheckCircle, FaExclamationTriangle, FaCopy, FaGlobe } from 'react-icons/fa';
 
+// Helper functions (moved here to be self-contained)
+const isValidUrl = (urlString: string): boolean => {
+  try {
+    const urlObj = new URL(urlString);
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const formatTime = (ms: number): string => {
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}m ${seconds}s`;
+};
+
+const generateSitemapFilename = (url: string): string => {
+  try {
+    const domain = new URL(url).hostname.replace(/^www\./, '');
+    const timestamp = new Date().toISOString().split('T')[0];
+    return `sitemap-${domain}-${timestamp}.txt`;
+  } catch {
+    return `sitemap-${new Date().toISOString().split('T')[0]}.txt`;
+  }
+};
+
+const downloadTextFile = (content: string, filename: string): void => {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+};
+
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    
+    document.body.appendChild(textarea);
+    textarea.select();
+    
+    const success = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    
+    return success;
+  }
+};
+
+// Interfaces
 interface SitemapResult {
   url: string;
   title?: string;
@@ -123,20 +94,12 @@ export default function SitemapGenerator() {
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsPerPage = 50;
 
+  // Focus on the input field when the component mounts
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
-
-  const isValidUrl = (urlString: string): boolean => {
-    try {
-      const urlObj = new URL(urlString);
-      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +140,7 @@ export default function SitemapGenerator() {
         setError(data.error || 'Terjadi kesalahan saat crawling');
       }
     } catch (err) {
+      console.error(err);
       setError('Terjadi kesalahan koneksi');
     } finally {
       setLoading(false);
@@ -306,24 +270,43 @@ export default function SitemapGenerator() {
 
             {/* Links List */}
             <div className="space-y-3 mb-6">
-              {paginatedResults.map((item, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-700/30 p-4 rounded-lg border border-gray-600/30 hover:border-purple-500/50 transition-all"
-                >
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-400 hover:text-green-300 font-mono text-sm break-all transition-colors"
+              {paginatedResults.map((item, index) => {
+                const displayIndex = (currentPage - 1) * resultsPerPage + index + 1;
+                return (
+                  <div
+                    key={index}
+                    className="bg-gray-700/30 p-4 rounded-lg border border-gray-600/30 hover:border-purple-500/50 transition-all hover:bg-gray-700/50 group"
                   >
-                    {item.url}
-                  </a>
-                  {item.title && (
-                    <p className="text-gray-400 text-xs mt-1 truncate">{item.title}</p>
-                  )}
-                </div>
-              ))}
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-xs text-gray-500 font-mono">#{displayIndex}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-green-400 text-xs">✅</span>
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-purple-300 transition-colors"
+                        >
+                          <span className="text-xs">🔗</span>
+                        </a>
+                      </div>
+                    </div>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-400 hover:text-green-300 font-mono text-sm break-all transition-colors block group-hover:text-green-300"
+                    >
+                      {item.url}
+                    </a>
+                    {item.title && (
+                      <p className="text-gray-400 text-xs mt-2 truncate" title={item.title}>
+                        📄 {item.title}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Pagination */}
