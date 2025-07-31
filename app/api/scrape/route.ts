@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
-import * as cheerio from 'cheerio';
 
 interface SitemapResult {
   url: string;
@@ -18,7 +16,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validasi URL
     let targetUrl: URL;
     try {
       targetUrl = new URL(url);
@@ -30,113 +27,80 @@ export async function POST(request: NextRequest) {
     }
 
     const startTime = Date.now();
-    
-    // Fetch halaman dengan axios
-    const response = await axios.get(url, {
-      timeout: 15000,
+
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
+        'Accept': 'text/html',
       },
     });
 
-    const $ = cheerio.load(response.data);
+    if (!response.ok) {
+      return NextResponse.json(
+        { success: false, error: `Gagal mengambil URL: ${response.status} ${response.statusText}` },
+        { status: response.status }
+      );
+    }
+
+    const htmlContent = await response.text();
     const links: SitemapResult[] = [];
-    const baseUrl = `${targetUrl.protocol}//${targetUrl.host}`;
     const seenUrls = new Set<string>();
+    
+    // Gunakan DOMParser bawaan untuk parsing HTML
+    const parser = new (self as any).DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
 
-    // Ekstrak semua link dengan tag 'a'
-    $('a[href]').each((_, element) => {
-      let href = $(element).attr('href');
-      if (!href) return;
+    const baseUrl = targetUrl.origin;
 
-      // Normalisasi URL
-      let fullUrl: string;
-      try {
-        if (href.startsWith('http://') || href.startsWith('https://')) {
-          fullUrl = href;
-        } else if (href.startsWith('//')) {
-          fullUrl = `${targetUrl.protocol}${href}`;
-        } else if (href.startsWith('/')) {
-          fullUrl = `${baseUrl}${href}`;
-        } else if (href.startsWith('#')) {
-          return; // Skip anchor links
-        } else {
-          // Relative URL
-          const currentPath = targetUrl.pathname.endsWith('/') 
-            ? targetUrl.pathname 
-            : targetUrl.pathname.substring(0, targetUrl.pathname.lastIndexOf('/') + 1);
-          fullUrl = `${baseUrl}${currentPath}${href}`;
-        }
-
-        // Validasi URL yang sudah dinormalisasi
-        const normalizedUrl = new URL(fullUrl);
-        
-        // Hanya ambil link internal (domain yang sama)
-        if (normalizedUrl.host === targetUrl.host) {
-          // Clean URL (remove fragment)
-          const cleanUrl = `${normalizedUrl.protocol}//${normalizedUrl.host}${normalizedUrl.pathname}${normalizedUrl.search}`;
+    // Ambil semua tag <a>
+    doc.querySelectorAll('a').forEach((linkElement: HTMLAnchorElement) => {
+      const href = linkElement.getAttribute('href');
+      if (href) {
+        try {
+          const absoluteUrl = new URL(href, baseUrl);
+          let cleanUrl = absoluteUrl.href;
           
-          if (!seenUrls.has(cleanUrl)) {
+          // Hapus hash dan parameter query
+          cleanUrl = cleanUrl.split('#')[0].split('?')[0];
+
+          // Pastikan URL berada di domain yang sama dan belum dilihat
+          if (cleanUrl.startsWith(baseUrl) && !seenUrls.has(cleanUrl)) {
             seenUrls.add(cleanUrl);
-            
-            // Ambil title dari link jika ada
-            const title = $(element).attr('title') || $(element).text().trim() || undefined;
-            
             links.push({
               url: cleanUrl,
-              title: title && title.length > 0 && title.length < 200 ? title : undefined
+              title: linkElement.textContent?.trim() || 'Link'
             });
           }
+        } catch (e) {
+          console.warn(`Invalid URL: ${href}`);
         }
-      } catch (e) {
-        // Skip invalid URLs
-        console.warn(`Invalid URL: ${href}`);
       }
     });
 
-    // Ekstrak meta links (canonical, alternate, etc.)
-    $('link[href]').each((_, element) => {
-      const href = $(element).attr('href');
-      const rel = $(element).attr('rel');
-      
-      if (!href || !rel) return;
-      
-      try {
-        let fullUrl: string;
-        if (href.startsWith('http://') || href.startsWith('https://')) {
-          fullUrl = href;
-        } else if (href.startsWith('//')) {
-          fullUrl = `${targetUrl.protocol}${href}`;
-        } else if (href.startsWith('/')) {
-          fullUrl = `${baseUrl}${href}`;
-        } else {
-          return;
-        }
+    // Ambil semua tag <link rel="canonical"> dan <link rel="alternate">
+    doc.querySelectorAll('link[rel="canonical"], link[rel="alternate"]').forEach((linkElement: HTMLLinkElement) => {
+      const href = linkElement.getAttribute('href');
+      if (href) {
+        try {
+          const absoluteUrl = new URL(href, baseUrl);
+          let cleanUrl = absoluteUrl.href;
+          cleanUrl = cleanUrl.split('#')[0].split('?')[0];
 
-        const normalizedUrl = new URL(fullUrl);
-        
-        if (normalizedUrl.host === targetUrl.host) {
-          const cleanUrl = `${normalizedUrl.protocol}//${normalizedUrl.host}${normalizedUrl.pathname}${normalizedUrl.search}`;
-          
-          if (!seenUrls.has(cleanUrl)) {
+          if (cleanUrl.startsWith(baseUrl) && !seenUrls.has(cleanUrl)) {
             seenUrls.add(cleanUrl);
-            
+            const rel = linkElement.getAttribute('rel');
             links.push({
               url: cleanUrl,
               title: `Meta Link (${rel})`
             });
           }
+        } catch (e) {
+          console.warn(`Invalid meta link: ${href}`);
         }
-      } catch (e) {
-        console.warn(`Invalid meta link: ${href}`);
       }
     });
 
-    // Sort links alphabetically
     links.sort((a, b) => a.url.localeCompare(b.url));
 
     const endTime = Date.now();
@@ -152,28 +116,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Scraping error:', error);
-    
     let errorMessage = 'Terjadi kesalahan saat crawling';
-    
-    if (error.code === 'ENOTFOUND') {
-      errorMessage = 'Domain tidak ditemukan';
-    } else if (error.code === 'ECONNREFUSED') {
-      errorMessage = 'Koneksi ditolak oleh server';
-    } else if (error.code === 'ETIMEDOUT') {
-      errorMessage = 'Request timeout';
-    } else if (error.response?.status === 404) {
-      errorMessage = 'Halaman tidak ditemukan (404)';
-    } else if (error.response?.status === 403) {
-      errorMessage = 'Akses ditolak (403)';
-    } else if (error.response?.status >= 500) {
-      errorMessage = 'Server error';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-
-    return NextResponse.json(
-      { success: false, error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
