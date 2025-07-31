@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {}, // kosongkan atau hapus jika perlu
+  // ... opsi konfigurasi lain yang valid
 };
 
 module.exports = nextConfig;
