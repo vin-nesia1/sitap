@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "regions": ["sin1", "hnd1"],
+  "env": {
+    "NEXT_PUBLIC_SITE_URL": "https://sitemap.vinnesia.my.id",
+    "NEXT_PUBLIC_SITE_NAME": "SITEMAP VIN NESIA"
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/sitemap",
+      "destination": "/",
+      "permanent": true
+    }
+  ],
+  "functions": {
+    "app/api/scrape/route.ts": {
+      "maxDuration": 30
+    }
+  }
+}
