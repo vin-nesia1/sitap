@@ -1,4 +1,63 @@
-{paginatedResults.map((item, index) => {
+const isValidUrl = (urlString: string): boolean => {
+    try {
+      const urlObj = new URL(urlString);
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  const formatTime = (ms: number): string => {
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+  };
+
+  const generateSitemapFilename = (url: string): string => {
+    try {
+      const domain = new URL(url).hostname.replace(/^www\./, '');
+      const timestamp = new Date().toISOString().split('T')[0];
+      return `sitemap-${domain}-${timestamp}.txt`;
+    } catch {
+      return `sitemap-${new Date().toISOString().split('T')[0]}.txt`;
+    }
+  };
+
+  const downloadTextFile = (content: string, filename: string): void => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(url);
+  };
+
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      
+      document.body.appendChild(textarea);
+      textarea.select();
+      
+      const success = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      
+      return success;
+    }
+  };              {paginatedResults.map((item, index) => {
                 const displayIndex = (currentPage - 1) * resultsPerPage + index + 1;
                 return (
                   <div
@@ -8,14 +67,14 @@
                     <div className="flex items-start justify-between mb-2">
                       <span className="text-xs text-gray-500 font-mono">#{displayIndex}</span>
                       <div className="flex items-center space-x-2">
-                        <FaCheckCircle className="text-green-400 text-xs" />
+                        <span className="text-green-400 text-xs">✅</span>
                         <a
                           href={item.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-gray-400 hover:text-purple-300 transition-colors"
                         >
-                          <FaExternalLinkAlt className="text-xs" />
+                          <span className="text-xs">🔗</span>
                         </a>
                       </div>
                     </div>
@@ -38,8 +97,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { FaCompass, FaBook, FaBalanceScale, FaEnvelope, FaMobile, FaDownload, FaSpinner, FaLink, FaClock, FaInstagram, FaWhatsapp, FaExternalLinkAlt, FaCheckCircle, FaExclamationTriangle, FaCopy, FaGlobe } from 'react-icons/fa';
-import { formatTime, generateSitemapFilename, downloadTextFile, copyToClipboard } from '../utils/helpers';
 
 interface SitemapResult {
   url: string;
@@ -155,7 +212,7 @@ export default function SitemapGenerator() {
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-green-400 rounded-lg flex items-center justify-center">
-              <FaLink className="text-white text-xl" />
+              <span className="text-white text-xl">🔗</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-green-400 to-yellow-400 bg-clip-text text-transparent">
               SITEMAP VIN NESIA
@@ -197,12 +254,12 @@ export default function SitemapGenerator() {
             >
               {loading ? (
                 <>
-                  <FaSpinner className="animate-spin" />
+                  <span className="animate-spin">⏳</span>
                   <span>Crawling...</span>
                 </>
               ) : (
                 <>
-                  <FaLink />
+                  <span>🔗</span>
                   <span>Generate Sitemap</span>
                 </>
               )}
@@ -222,11 +279,11 @@ export default function SitemapGenerator() {
             {/* Stats */}
             <div className="flex flex-wrap gap-6 mb-8">
               <div className="flex items-center space-x-2 bg-purple-500/20 px-4 py-2 rounded-lg">
-                <FaLink className="text-purple-400" />
+                <span className="text-purple-400">🔗</span>
                 <span className="text-purple-300">Total Link: {totalLinks}</span>
               </div>
               <div className="flex items-center space-x-2 bg-green-500/20 px-4 py-2 rounded-lg">
-                <FaClock className="text-green-400" />
+                <span className="text-green-400">⏱️</span>
                 <span className="text-green-300">Waktu Crawl: {formatTime(crawlTime)}</span>
               </div>
               <div className="flex items-center space-x-4">
@@ -234,14 +291,14 @@ export default function SitemapGenerator() {
                   onClick={downloadTxt}
                   className="flex items-center space-x-2 bg-yellow-500/20 hover:bg-yellow-500/30 px-4 py-2 rounded-lg transition-all text-yellow-300 hover:text-yellow-200"
                 >
-                  <FaDownload />
+                  <span>💾</span>
                   <span>Download TXT</span>
                 </button>
                 <button
                   onClick={copyAllLinks}
                   className="flex items-center space-x-2 bg-blue-500/20 hover:bg-blue-500/30 px-4 py-2 rounded-lg transition-all text-blue-300 hover:text-blue-200"
                 >
-                  <FaCopy />
+                  <span>📋</span>
                   <span>Copy All</span>
                 </button>
               </div>
@@ -302,7 +359,7 @@ export default function SitemapGenerator() {
             {/* Navigasi */}
             <div>
               <h3 className="flex items-center space-x-2 text-lg font-semibold mb-4 text-purple-300">
-                <FaCompass className="text-purple-400" />
+                <span className="text-purple-400">🧭</span>
                 <span>Navigasi</span>
               </h3>
               <ul className="space-y-2 text-gray-400">
@@ -316,7 +373,7 @@ export default function SitemapGenerator() {
             {/* Bantuan */}
             <div>
               <h3 className="flex items-center space-x-2 text-lg font-semibold mb-4 text-purple-300">
-                <FaBook className="text-purple-400" />
+                <span className="text-purple-400">📚</span>
                 <span>Bantuan</span>
               </h3>
               <ul className="space-y-2 text-gray-400">
@@ -329,7 +386,7 @@ export default function SitemapGenerator() {
             {/* Legal */}
             <div>
               <h3 className="flex items-center space-x-2 text-lg font-semibold mb-4 text-purple-300">
-                <FaBalanceScale className="text-purple-400" />
+                <span className="text-purple-400">⚖️</span>
                 <span>Legal</span>
               </h3>
               <ul className="space-y-2 text-gray-400">
@@ -342,7 +399,7 @@ export default function SitemapGenerator() {
             {/* Kontak */}
             <div>
               <h3 className="flex items-center space-x-2 text-lg font-semibold mb-4 text-purple-300">
-                <FaEnvelope className="text-purple-400" />
+                <span className="text-purple-400">✉️</span>
                 <span>Email</span>
               </h3>
               <ul className="space-y-2 text-gray-400">
@@ -352,15 +409,15 @@ export default function SitemapGenerator() {
               </ul>
 
               <h3 className="flex items-center space-x-2 text-lg font-semibold mb-4 mt-6 text-yellow-300">
-                <FaMobile className="text-yellow-400" />
+                <span className="text-yellow-400">📱</span>
                 <span>Media Sosial</span>
               </h3>
               <div className="flex space-x-3">
-                <a href="#" className="text-yellow-400 hover:text-yellow-300 transition-colors">
-                  <FaInstagram size={20} />
+                <a href="#" className="text-yellow-400 hover:text-yellow-300 transition-colors text-xl">
+                  📷
                 </a>
-                <a href="#" className="text-yellow-400 hover:text-yellow-300 transition-colors">
-                  <FaWhatsapp size={20} />
+                <a href="#" className="text-yellow-400 hover:text-yellow-300 transition-colors text-xl">
+                  📞
                 </a>
               </div>
             </div>
