@@ -1,3 +1,4 @@
+'use client';
 import { FaSpinner, FaRocket } from 'react-icons/fa';
 
 interface LoadingProps {
