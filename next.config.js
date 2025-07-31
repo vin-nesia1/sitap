@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
+  experimental: {}, // kosongkan atau hapus jika perlu
+};
+
+module.exports = nextConfig;
   },
   
   // Enable static exports for better performance
