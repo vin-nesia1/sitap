@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://sitemap.vinnesia.my.id/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Block access to API routes from crawlers
+Disallow: /api/
+
+# Allow access to static assets
+Allow: /favicon.ico
+Allow: /logo.png
+Allow: /og-image.jpg
+Allow: /_next/static/
+Allow: /_next/image/
+
+# Additional directives
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
